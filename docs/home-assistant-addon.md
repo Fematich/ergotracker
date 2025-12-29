@@ -14,10 +14,8 @@ This add-on packages the React UI together with a small Express + SQLite API so 
 - `server/index.js` – Express API + static file server (used both locally and in the add-on).
 
 ## Building/installing in Home Assistant
-1) Copy the `home-assistant-addon` folder to your Home Assistant host add-ons directory (e.g. `/addons/ergotracker`).
-2) In the add-on, ensure the full project contents are present (the Docker build copies the root of this repo).
-3) In Home Assistant UI: **Settings → Add-ons → Add-on Store → ⋮ → Repositories → Add** and point to your Git repo or local dev add-on path.
-4) Install the `Ergotracker` add-on, start it, and enable ingress. The UI will be available via the sidebar; direct access is on port `8099` if you expose it.
+1) Point Home Assistant to this repo directly: **Settings → Add-ons → Add-on Store → ⋮ → Repositories → Add** and paste `https://github.com/Fematich/ergotracker`. (The repository is now HA-ready via `repository.json`.)
+2) Install the `Ergotracker` add-on, start it, and enable ingress. The UI will be available via the sidebar; direct access is on port `8099` if you expose it.
 
 ## Local testing (outside HA)
 ```bash
