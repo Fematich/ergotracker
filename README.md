@@ -71,3 +71,7 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Home Assistant add-on
+
+This project now includes a Home Assistant add-on that serves the UI and a local SQLite-backed API. See `docs/home-assistant-addon.md` for install/build steps.

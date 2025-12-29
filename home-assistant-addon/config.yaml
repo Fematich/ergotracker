@@ -1,0 +1,26 @@
+name: Ergotracker
+slug: ergotracker
+description: "Local-first 2K erg training tracker with SQLite storage and Home Assistant ingress."
+version: "0.1.0"
+arch:
+  - amd64
+  - aarch64
+  - armv7
+startup: services
+boot: auto
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:rowing
+panel_title: Ergotracker
+webui: "http://[HOST]:[PORT:8099]/"
+ports:
+  8099/tcp: 8099
+map:
+  - data:rw
+options: {}
+schema: {}
+image: "local/ergotracker-{arch}"
+watchdog: "http://[HOST]:[PORT:8099]/api/health"
+build:
+  context: ..
+  dockerfile: home-assistant-addon/Dockerfile

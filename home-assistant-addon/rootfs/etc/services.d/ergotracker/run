@@ -1,0 +1,7 @@
+#!/command/with-contenv bashio
+set -e
+
+cd /opt/ergotracker
+bashio::log.info "Starting Ergotracker server on port ${PORT:-8099}"
+
+exec node server/index.js
