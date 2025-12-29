@@ -1,14 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useDeviceId } from './useDeviceId';
 import { trainingProgram } from '@/data/trainingProgram';
+import {
+  addCompletedWorkout,
+  fetchCompletedWorkouts,
+  fetchTrainingSettings,
+  removeCompletedWorkout,
+  saveStartDate,
+} from '@/lib/api';
 
 interface TrainingSettings {
   startDate: Date | null;
 }
 
 interface CompletedWorkout {
-  workout_day: number;
+  day: number;
   completed_at: string;
 }
 
@@ -18,42 +24,47 @@ export function useTrainingData() {
   const [completedWorkouts, setCompletedWorkouts] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
 
-  // Fetch training settings
+  // Fetch training settings and completed workouts together once we have a device ID
   useEffect(() => {
     if (!deviceId) return;
 
-    async function fetchSettings() {
-      const { data } = await supabase
-        .from('training_settings')
-        .select('start_date')
-        .eq('device_id', deviceId)
-        .maybeSingle();
+    let cancelled = false;
+    setLoading(true);
 
-      if (data) {
-        setStartDateState(new Date(data.start_date));
+    async function fetchData() {
+      try {
+        const [settings, completions] = await Promise.all([
+          fetchTrainingSettings(deviceId),
+          fetchCompletedWorkouts(deviceId),
+        ]);
+
+        if (cancelled) return;
+
+        if (settings.startDate) {
+          setStartDateState(new Date(settings.startDate));
+        }
+
+        if (completions.completed?.length) {
+          setCompletedWorkouts(
+            new Set(completions.completed.map((w: CompletedWorkout) => w.day))
+          );
+        } else {
+          setCompletedWorkouts(new Set());
+        }
+      } catch (error) {
+        console.error('Failed to load training data', error);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
-    fetchSettings();
-  }, [deviceId]);
+    fetchData();
 
-  // Fetch completed workouts
-  useEffect(() => {
-    if (!deviceId) return;
-
-    async function fetchCompletedWorkouts() {
-      const { data } = await supabase
-        .from('completed_workouts')
-        .select('workout_day, completed_at')
-        .eq('device_id', deviceId);
-
-      if (data) {
-        setCompletedWorkouts(new Set(data.map((w: CompletedWorkout) => w.workout_day)));
-      }
-      setLoading(false);
-    }
-
-    fetchCompletedWorkouts();
+    return () => {
+      cancelled = true;
+    };
   }, [deviceId]);
 
   const setStartDate = useCallback(async (date: Date) => {
@@ -61,17 +72,11 @@ export function useTrainingData() {
 
     const dateStr = date.toISOString().split('T')[0];
 
-    const { error } = await supabase
-      .from('training_settings')
-      .upsert({
-        device_id: deviceId,
-        start_date: dateStr,
-      }, {
-        onConflict: 'device_id'
-      });
-
-    if (!error) {
+    try {
+      await saveStartDate(deviceId, dateStr);
       setStartDateState(date);
+    } catch (error) {
+      console.error('Failed to save start date', error);
     }
   }, [deviceId]);
 
@@ -81,28 +86,24 @@ export function useTrainingData() {
     const isCompleted = completedWorkouts.has(day);
 
     if (isCompleted) {
-      // Remove completion
-      await supabase
-        .from('completed_workouts')
-        .delete()
-        .eq('device_id', deviceId)
-        .eq('workout_day', day);
+      try {
+        await removeCompletedWorkout(deviceId, day);
 
-      setCompletedWorkouts(prev => {
-        const next = new Set(prev);
-        next.delete(day);
-        return next;
-      });
-    } else {
-      // Add completion
-      await supabase
-        .from('completed_workouts')
-        .insert({
-          device_id: deviceId,
-          workout_day: day,
+        setCompletedWorkouts(prev => {
+          const next = new Set(prev);
+          next.delete(day);
+          return next;
         });
-
-      setCompletedWorkouts(prev => new Set([...prev, day]));
+      } catch (error) {
+        console.error('Failed to remove workout completion', error);
+      }
+    } else {
+      try {
+        await addCompletedWorkout(deviceId, day);
+        setCompletedWorkouts(prev => new Set([...prev, day]));
+      } catch (error) {
+        console.error('Failed to save workout completion', error);
+      }
     }
   }, [deviceId, completedWorkouts]);
 
