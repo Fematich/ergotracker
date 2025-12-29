@@ -19,7 +19,6 @@ map:
   - data:rw
 options: {}
 schema: {}
-image: "local/ergotracker-{arch}"
 watchdog: "http://[HOST]:[PORT:8099]/api/health"
 build:
   context: ..
